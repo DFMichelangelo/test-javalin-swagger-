@@ -1,0 +1,35 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.octopus'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'https://projectlombok.org/edge-releases'
+    }
+}
+
+dependencies {
+    implementation 'io.javalin:javalin:6.7.0'
+    implementation 'io.javalin.community.openapi:javalin-openapi-plugin:6.7.0'
+    implementation 'io.javalin.community.openapi:javalin-swagger-plugin:6.7.0'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'org.slf4j:slf4j-simple:2.0.9'
+
+    compileOnly 'org.projectlombok:lombok:edge-SNAPSHOT'
+    annotationProcessor 'org.projectlombok:lombok:edge-SNAPSHOT'
+
+    // OpenAPI annotation processor - generates OpenAPI spec at compile time
+    annotationProcessor 'io.javalin.community.openapi:openapi-annotation-processor:6.7.0'
+
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+}
