@@ -61,6 +61,19 @@ public class AsyncRequestHandler<T extends CorrelationIdProvider, R extends Corr
     }
 
     /**
+     * Completes a pending request exceptionally with an error.
+     * Use this when you need to explicitly fail a request.
+     *
+     * @param correlationId The correlation ID
+     * @param throwable The exception to complete the future with
+     * @return true if a pending request was found and completed exceptionally, false otherwise
+     */
+    public boolean completeExceptionally(String correlationId, Throwable throwable) {
+        log.warn("Completing request exceptionally for correlation ID: {}", correlationId);
+        return correlationManager.completeExceptionally(correlationId, throwable);
+    }
+
+    /**
      * Returns the number of pending requests.
      */
     public int getPendingRequestCount() {
@@ -72,5 +85,13 @@ public class AsyncRequestHandler<T extends CorrelationIdProvider, R extends Corr
      */
     public CorrelationManager<R> getCorrelationManager() {
         return correlationManager;
+    }
+
+    /**
+     * Shuts down the underlying correlation manager.
+     * Call this when the application is shutting down.
+     */
+    public void shutdown() {
+        correlationManager.shutdown();
     }
 }
