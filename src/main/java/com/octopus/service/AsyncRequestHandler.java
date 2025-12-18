@@ -1,5 +1,6 @@
 package com.octopus.service;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
@@ -15,6 +16,11 @@ import java.util.function.Consumer;
  */
 @Slf4j
 public class AsyncRequestHandler<T extends CorrelationIdProvider, R extends CorrelationIdProvider> {
+    /**
+     * -- GETTER --
+     *  Returns the underlying correlation manager.
+     */
+    @Getter
     private final CorrelationManager<R> correlationManager;
     private final Consumer<T> requestSender;
 
@@ -78,20 +84,5 @@ public class AsyncRequestHandler<T extends CorrelationIdProvider, R extends Corr
      */
     public int getPendingRequestCount() {
         return correlationManager.getPendingCount();
-    }
-
-    /**
-     * Returns the underlying correlation manager.
-     */
-    public CorrelationManager<R> getCorrelationManager() {
-        return correlationManager;
-    }
-
-    /**
-     * Shuts down the underlying correlation manager.
-     * Call this when the application is shutting down.
-     */
-    public void shutdown() {
-        correlationManager.shutdown();
     }
 }

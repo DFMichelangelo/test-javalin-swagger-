@@ -39,18 +39,10 @@ class AsyncRequestHandlerTest {
 
         correlationManager = new CorrelationManager<>(
             TIMEOUT_SECONDS,
-            correlationId -> new Response(correlationId, "Request timed out", false),
-            1 // cleanup interval in minutes
+            correlationId -> new Response(correlationId, "Request timed out", false)
         );
 
         requestHandler = new AsyncRequestHandler<>(correlationManager, requestSender);
-    }
-
-    @AfterEach
-    void tearDown() {
-        if (requestHandler != null) {
-            requestHandler.shutdown();
-        }
     }
 
     // ==================== Basic Functionality Tests ====================
@@ -275,14 +267,10 @@ class AsyncRequestHandlerTest {
 
         Request request = new Request("fail-to-send");
 
-        try {
-            // When/Then - should throw when sending
-            assertThatThrownBy(() -> failingHandler.sendRequest(request))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Sender failed");
-        } finally {
-            failingHandler.shutdown();
-        }
+        // When/Then - should throw when sending
+        assertThatThrownBy(() -> failingHandler.sendRequest(request))
+            .isInstanceOf(RuntimeException.class)
+            .hasMessageContaining("Sender failed");
     }
 
     // ==================== Response Handling Tests ====================
@@ -304,7 +292,7 @@ class AsyncRequestHandlerTest {
     @Test
     @Order(31)
     @DisplayName("Should handle null request sender gracefully")
-    void testNullRequestSender() {
+    void testNullRequestSender() throws ExecutionException, InterruptedException {
         // Given
         AsyncRequestHandler<Request, Response> handlerWithNullSender =
             new AsyncRequestHandler<>(correlationManager, null);
@@ -312,20 +300,16 @@ class AsyncRequestHandlerTest {
         Request request = new Request("no-sender");
         String correlationId = request.getCorrelationId();
 
-        try {
-            // When
-            CompletableFuture<Response> future = handlerWithNullSender.sendRequest(request);
+        // When
+        CompletableFuture<Response> future = handlerWithNullSender.sendRequest(request);
 
-            // Simulate response
-            Response response = new Response(correlationId, "Success", true);
-            handlerWithNullSender.receiveResponse(response);
+        // Simulate response
+        Response response = new Response(correlationId, "Success", true);
+        handlerWithNullSender.receiveResponse(response);
 
-            // Then - should still work, just won't actually send
-            assertThat(future.isDone()).isTrue();
-            assertThat(future.join()).isEqualTo(response);
-        } finally {
-            handlerWithNullSender.shutdown();
-        }
+        // Then - should still work, just won't actually send
+        assertThat(future.isDone()).isTrue();
+        assertThat(future.get()).isEqualTo(response);
     }
 
     @Test
@@ -578,31 +562,4 @@ class AsyncRequestHandlerTest {
         assertThat(finalResponse.isSuccess()).isTrue();
     }
 
-    // ==================== Shutdown Tests ====================
-
-    @Test
-    @Order(60)
-    @DisplayName("Should shutdown gracefully")
-    void testShutdown() {
-        // Given
-        requestHandler.sendRequest(new Request("pending"));
-
-        // When
-        assertDoesNotThrow(() -> requestHandler.shutdown());
-
-        // Then - should complete without hanging
-    }
-
-    @Test
-    @Order(61)
-    @DisplayName("Should shutdown with pending requests")
-    void testShutdownWithPending() {
-        // Given
-        for (int i = 0; i < 10; i++) {
-            requestHandler.sendRequest(new Request("pending-" + i));
-        }
-
-        // When/Then
-        assertDoesNotThrow(() -> requestHandler.shutdown());
-    }
 }

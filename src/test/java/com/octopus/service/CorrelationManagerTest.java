@@ -35,18 +35,7 @@ class CorrelationManagerTest {
         Function<String, TestResponse> timeoutFactory =
             correlationId -> new TestResponse(correlationId, "Timeout", false);
 
-        correlationManager = new CorrelationManager<>(
-            SHORT_TIMEOUT_SECONDS,
-            timeoutFactory,
-            CLEANUP_INTERVAL_MINUTES
-        );
-    }
-
-    @AfterEach
-    void tearDown() {
-        if (correlationManager != null) {
-            correlationManager.shutdown();
-        }
+        correlationManager = new CorrelationManager<>(SHORT_TIMEOUT_SECONDS, timeoutFactory);
     }
 
     // ==================== Basic Functionality Tests ====================
@@ -175,24 +164,19 @@ class CorrelationManagerTest {
     @DisplayName("Should handle timeout without response factory (null)")
     void testTimeoutWithNullFactory() {
         // Given
-        CorrelationManager<TestResponse> managerWithoutFactory =
-            new CorrelationManager<>(1, null, 1);
+        CorrelationManager<TestResponse> managerWithoutFactory = new CorrelationManager<>(1, null);
         String correlationId = "timeout-002";
         CompletableFuture<TestResponse> future = managerWithoutFactory.register(correlationId);
 
-        try {
-            // When - wait for timeout
-            await()
-                .atMost(Duration.ofSeconds(3))
-                .pollInterval(Duration.ofMillis(100))
-                .untilAsserted(() -> assertThat(future.isDone()).isTrue());
+        // When - wait for timeout
+        await()
+            .atMost(Duration.ofSeconds(3))
+            .pollInterval(Duration.ofMillis(100))
+            .untilAsserted(() -> assertThat(future.isDone()).isTrue());
 
-            // Then - should complete with null
-            assertThat(future.join()).isNull();
-            assertThat(managerWithoutFactory.getPendingCount()).isEqualTo(0);
-        } finally {
-            managerWithoutFactory.shutdown();
-        }
+        // Then - should complete with null
+        assertThat(future.join()).isNull();
+        assertThat(managerWithoutFactory.getPendingCount()).isEqualTo(0);
     }
 
     @Test
@@ -535,39 +519,6 @@ class CorrelationManagerTest {
         assertThat(completed1).isTrue();
         assertThat(completed2).isFalse(); // Already removed
         assertThat(future.get()).isEqualTo(response1); // First completion wins
-    }
-
-    // ==================== Shutdown Tests ====================
-
-    @Test
-    @Order(60)
-    @DisplayName("Should shutdown gracefully")
-    void testGracefulShutdown() {
-        // Given
-        CorrelationManager<TestResponse> manager = new CorrelationManager<>(30, null);
-        manager.register("test-shutdown");
-
-        // When
-        assertDoesNotThrow(() -> manager.shutdown());
-
-        // Then - should complete without hanging
-        assertThat(manager.getPendingCount()).isGreaterThanOrEqualTo(0);
-    }
-
-    @Test
-    @Order(61)
-    @DisplayName("Should handle shutdown with pending requests")
-    void testShutdownWithPendingRequests() {
-        // Given
-        CorrelationManager<TestResponse> manager = new CorrelationManager<>(30, null);
-        for (int i = 0; i < 10; i++) {
-            manager.register("pending-" + i);
-        }
-
-        // When
-        assertDoesNotThrow(() -> manager.shutdown());
-
-        // Shutdown shouldn't fail even with pending requests
     }
 
     // ==================== Integration Tests ====================
