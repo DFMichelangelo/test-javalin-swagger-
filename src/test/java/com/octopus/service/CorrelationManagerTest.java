@@ -25,7 +25,6 @@ class CorrelationManagerTest {
 
     private CorrelationManager<TestResponse> correlationManager;
     private static final long SHORT_TIMEOUT_SECONDS = 2;
-    private static final long CLEANUP_INTERVAL_MINUTES = 1;
 
     // Test response class
     record TestResponse(String correlationId, String data, boolean success) {}

@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package animals;
+
+option java_package = "com.octopus.proto";
+option java_outer_classname = "AnimalProto";
+
+message AnimalMessage {
+  int64 timestamp = 1;
+
+  oneof animal_type {
+    Dog dog = 10;
+    Cat cat = 11;
+    Bird bird = 12;
+    Fish fish = 13;
+  }
+}
+
+message Dog {
+  string name = 1;
+  string breed = 2;
+  int32 age = 3;
+  bool is_trained = 4;
+}
+
+message Cat {
+  string name = 1;
+  string color = 2;
+  int32 age = 3;
+  bool is_indoor = 4;
+}
+
+message Bird {
+  string name = 1;
+  string species = 2;
+  bool can_fly = 3;
+  double wingspan_cm = 4;
+}
+
+message Fish {
+  string name = 1;
+  string type = 2;
+  double length_cm = 3;
+  string water_type = 4; // FRESH or SALT
+}
