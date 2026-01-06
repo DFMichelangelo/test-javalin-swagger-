@@ -1,5 +1,6 @@
 package com.octopus;
 
+import com.octopus.config.Log4jSystemStreamInitializer;
 import com.octopus.dto.Request;
 import com.octopus.dto.Response;
 import com.octopus.service.AsyncRequestHandler;
@@ -35,6 +36,9 @@ public class Main {
             );
 
     void main() {
+        // Redirect System.out and System.err to Log4j
+        Log4jSystemStreamInitializer.initialize();
+
         Javalin app = Javalin.create(config -> {
             config.http.defaultContentType = "application/json";
 

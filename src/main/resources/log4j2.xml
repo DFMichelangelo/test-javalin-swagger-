@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Properties>
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+        <Property name="LOG_FILE">logs/application.log</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Console Appender -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
+
+        <!-- File Appender with Rolling Policy -->
+        <RollingFile name="FileAppender" fileName="${LOG_FILE}"
+                     filePattern="logs/application-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <!-- Roll over daily -->
+                <TimeBasedTriggeringPolicy />
+                <!-- Roll over when file size reaches 10MB -->
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+            <!-- Keep last 30 days of logs -->
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
+
+        <!-- System.out Appender - captures System.out.println() -->
+        <Console name="SystemOut" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level - %msg%n"/>
+        </Console>
+
+        <!-- System.err Appender - captures System.err.println() and e.printStackTrace() -->
+        <Console name="SystemErr" target="SYSTEM_ERR">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level - %msg%n"/>
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <!-- Root Logger -->
+        <Root level="info">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
+        </Root>
+        <!-- Logger for System.out -->
+        <Logger name="System.out" level="info" additivity="false">
+            <AppenderRef ref="FileAppender"/>
+        </Logger>
+        <!-- Logger for System.err -->
+        <Logger name="System.err" level="error" additivity="false">
+            <AppenderRef ref="FileAppender"/>
+        </Logger>
+        <!-- Set specific logging levels for third-party libraries if needed -->
+        <Logger name="io.javalin" level="info"/>
+        <Logger name="org.eclipse.jetty" level="warn"/>
+    </Loggers>
+</Configuration>

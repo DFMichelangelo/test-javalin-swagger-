@@ -19,7 +19,11 @@ dependencies {
     implementation 'io.javalin.community.openapi:javalin-openapi-plugin:6.7.0'
     implementation 'io.javalin.community.openapi:javalin-swagger-plugin:6.7.0'
     implementation 'com.google.code.gson:gson:2.10.1'
-    implementation 'org.slf4j:slf4j-simple:2.0.9'
+
+    // Log4j2 dependencies
+    implementation 'org.apache.logging.log4j:log4j-core:2.22.1'
+    implementation 'org.apache.logging.log4j:log4j-api:2.22.1'
+    implementation 'org.apache.logging.log4j:log4j-slf4j2-impl:2.22.1'
 
     // Protobuf dependencies
     implementation 'com.google.protobuf:protobuf-java:3.25.1'
@@ -47,7 +51,7 @@ test {
 }
 
 application {
-    mainClass = 'com.octopus.trading.AnimalExample'
+    mainClass = 'com.octopus.Main'
 }
 
 protobuf {
