@@ -5,6 +5,18 @@ package animals;
 option java_package = "com.octopus.proto";
 option java_outer_classname = "AnimalProto";
 
+// Wrapper message that supports auto-deserialization
+// The deserializer can determine the type from the oneof field
+message GenericWrapper {
+  oneof payload {
+    Dog dog = 1;
+    Cat cat = 2;
+    Bird bird = 3;
+    Fish fish = 4;
+    AnimalMessage animal_message = 5;
+  }
+}
+
 message AnimalMessage {
   int64 timestamp = 1;
 
