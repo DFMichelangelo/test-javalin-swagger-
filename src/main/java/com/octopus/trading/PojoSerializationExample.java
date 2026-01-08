@@ -5,6 +5,8 @@ import com.octopus.model.CatPojo;
 import com.octopus.model.DogPojo;
 import com.octopus.model.BirdPojo;
 import com.octopus.model.FishPojo;
+import com.octopus.proto.AnimalProto.GenericWrapper;
+import com.octopus.util.AnimalWrapperParser;
 import com.octopus.util.ProtoSerializer;
 import com.octopus.util.converter.CatConverter;
 import com.octopus.util.converter.DogConverter;
@@ -24,13 +26,14 @@ public class PojoSerializationExample {
 
         System.out.println("=== POJO-based Serialization ===\n");
 
-        // Step 1: Register converters
-        System.out.println("Step 1: Registering converters...");
-        ProtoSerializer.registerConverter(new CatConverter());
-        ProtoSerializer.registerConverter(new DogConverter());
-        ProtoSerializer.registerConverter(new BirdConverter());
-        ProtoSerializer.registerConverter(new FishConverter());
-        System.out.println("Registered " + ProtoSerializer.getRegistrySize() + " converters\n");
+        // Step 1: Create serializer and register converters
+        System.out.println("Step 1: Creating serializer and registering converters...");
+        ProtoSerializer<GenericWrapper> serializer = new ProtoSerializer<>(new AnimalWrapperParser());
+        serializer.registerConverter(new CatConverter());
+        serializer.registerConverter(new DogConverter());
+        serializer.registerConverter(new BirdConverter());
+        serializer.registerConverter(new FishConverter());
+        System.out.println("Registered " + serializer.getRegistrySize() + " converters\n");
 
         // Step 2: Create POJOs (Plain Old Java Objects)
         System.out.println("Step 2: Creating POJOs...\n");
@@ -50,10 +53,10 @@ public class PojoSerializationExample {
 
         // Step 3: Serialize POJOs to byte arrays
         System.out.println("Step 3: Serializing POJOs...");
-        byte[] catBytes = ProtoSerializer.serialize(cat);
-        byte[] dogBytes = ProtoSerializer.serialize(dog);
-        byte[] birdBytes = ProtoSerializer.serialize(bird);
-        byte[] fishBytes = ProtoSerializer.serialize(fish);
+        byte[] catBytes = serializer.serialize(cat);
+        byte[] dogBytes = serializer.serialize(dog);
+        byte[] birdBytes = serializer.serialize(bird);
+        byte[] fishBytes = serializer.serialize(fish);
         System.out.println("Serialized 4 POJOs to byte arrays\n");
 
         // Step 4: Store all byte arrays together
@@ -74,17 +77,17 @@ public class PojoSerializationExample {
 
             System.out.println("Data " + (i + 1) + ":");
 
-            // Deserialize - returns the actual POJO!
-            Object pojo = ProtoSerializer.deserialize(data);
+            // Deserialize - type automatically detected from wrapper!
+            Object pojo = serializer.deserialize(data);
             System.out.println("  Deserialized as: " + pojo.getClass().getSimpleName());
             System.out.println("  Content: " + pojo);
             System.out.println();
         }
 
-        // Step 6: Type-safe extraction
+        // Step 6: Type-safe extraction using instanceof
         System.out.println("=== Step 6: Type-safe extraction ===\n");
 
-        Object unknownPojo = ProtoSerializer.deserialize(catBytes);
+        Object unknownPojo = serializer.deserialize(catBytes);
         if (unknownPojo instanceof CatPojo c) {
             System.out.println("Successfully extracted as CatPojo:");
             System.out.println("  Name: " + c.getName());
@@ -97,7 +100,7 @@ public class PojoSerializationExample {
         // Step 7: Demonstrate type checking
         System.out.println("=== Step 7: Type checking ===\n");
 
-        Object dogPojo = ProtoSerializer.deserialize(dogBytes);
+        Object dogPojo = serializer.deserialize(dogBytes);
         if (dogPojo instanceof DogPojo d) {
             System.out.println("Correctly identified as DogPojo: " + d.getName());
         } else {

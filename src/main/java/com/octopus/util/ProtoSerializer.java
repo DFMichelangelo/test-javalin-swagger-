@@ -2,25 +2,42 @@ package com.octopus.util;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
-import com.octopus.proto.AnimalProto.GenericWrapper;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Simple, fast protobuf serialization/deserialization with automatic type detection.
+ * Generic protobuf serialization/deserialization with automatic type detection.
  * Works with POJOs (Plain Old Java Objects) and converts them to/from protobuf format.
- * Uses GenericWrapper's oneof field to determine message type.
+ * Uses the wrapper's oneof field to determine message type.
+ *
+ * This class is parameterized by wrapper type (W), allowing it to work with any .proto wrapper.
  *
  * Usage:
- * 1. Register converters: ProtoSerializer.registerConverter(new DogConverter());
- * 2. Serialize: byte[] data = ProtoSerializer.serialize(dogPojo);
- * 3. Deserialize: DogPojo dog = (DogPojo) ProtoSerializer.deserialize(data);
+ * 1. Create serializer: ProtoSerializer<GenericWrapper> serializer = new ProtoSerializer<>(new AnimalWrapperParser());
+ * 2. Register converters: serializer.registerConverter(new DogConverter());
+ * 3. Serialize: byte[] data = serializer.serialize(dogPojo);
+ * 4. Deserialize: DogPojo dog = (DogPojo) serializer.deserialize(data);
+ *
+ * @param <W> the wrapper message type (e.g., GenericWrapper, VehicleWrapper)
  */
-public class ProtoSerializer {
+public class ProtoSerializer<W extends Message> {
 
-    private static final Map<Class<?>, ProtobufConverter<?, ? extends Message>> convertersByPojoClass = new HashMap<>();
-    private static final Map<Class<? extends Message>, ProtobufConverter<?, ? extends Message>> convertersByMessageClass = new HashMap<>();
+    private final WrapperParser<W> wrapperParser;
+    private final Map<Class<?>, ProtobufConverter<?, ? extends Message>> convertersByPojoClass = new HashMap<>();
+    private final Map<Class<? extends Message>, ProtobufConverter<?, ? extends Message>> convertersByMessageClass = new HashMap<>();
+
+    /**
+     * Creates a new ProtoSerializer for a specific wrapper type.
+     *
+     * @param wrapperParser the parser that knows how to handle the wrapper type
+     */
+    public ProtoSerializer(WrapperParser<W> wrapperParser) {
+        if (wrapperParser == null) {
+            throw new IllegalArgumentException("WrapperParser cannot be null");
+        }
+        this.wrapperParser = wrapperParser;
+    }
 
     /**
      * Registers a protobuf converter that handles POJO to/from protobuf conversion.
@@ -29,7 +46,7 @@ public class ProtoSerializer {
      * @param <P>       the POJO type
      * @param <M>       the protobuf Message type
      */
-    public static <P, M extends Message> void registerConverter(ProtobufConverter<P, M> converter) {
+    public <P, M extends Message> void registerConverter(ProtobufConverter<P, M> converter) {
         if (converter == null) {
             throw new IllegalArgumentException("Converter cannot be null");
         }
@@ -41,19 +58,18 @@ public class ProtoSerializer {
     /**
      * Serializes a POJO to byte array.
      * Uses the registered converter to convert POJO to protobuf message,
-     * wrap in GenericWrapper, and serialize.
+     * wrap in the wrapper type, and serialize.
      *
      * @param pojo the POJO (business object) to serialize
-     * @return byte array representation of the GenericWrapper
+     * @param <T>  the POJO type
+     * @return byte array representation of the wrapper
      */
-    public static byte[] serialize(Object pojo) {
+    public <T> byte[] serialize(T pojo) {
         if (pojo == null) {
             throw new IllegalArgumentException("POJO cannot be null");
         }
 
-        @SuppressWarnings("unchecked")
-        ProtobufConverter<Object, ? extends Message> converter =
-            (ProtobufConverter<Object, ? extends Message>) convertersByPojoClass.get(pojo.getClass());
+        ProtobufConverter<?, ? extends Message> converter = convertersByPojoClass.get(pojo.getClass());
 
         if (converter == null) {
             throw new IllegalArgumentException(
@@ -61,43 +77,40 @@ public class ProtoSerializer {
                     ". Use registerConverter() to register this type.");
         }
 
-        return converter.serialize(pojo);
+        ProtobufConverter<T, ? extends Message> typedConverter = castConverter(converter);
+        return typedConverter.serialize(pojo);
     }
 
     /**
-     * Automatically deserializes a byte array without specifying the type.
-     * Reads the GenericWrapper's oneof field to determine which type it contains,
-     * then uses the appropriate converter to return a POJO.
+     * Deserializes a byte array by automatically detecting the type from the wrapper.
+     * Reads the wrapper's oneof field to determine which type it contains,
+     * then uses the appropriate converter to return the POJO.
      *
-     * @param data the byte array to deserialize (GenericWrapper bytes)
+     * @param data the byte array to deserialize (wrapper bytes)
      * @return the deserialized POJO (business object)
      * @throws InvalidProtocolBufferException if deserialization fails
      */
-    public static Object deserialize(byte[] data) throws InvalidProtocolBufferException {
+    public Object deserialize(byte[] data) throws InvalidProtocolBufferException {
         if (data == null || data.length == 0) {
             throw new IllegalArgumentException("Data cannot be null or empty");
         }
 
-        // First, determine which converter to use by parsing the wrapper
-        GenericWrapper wrapper = GenericWrapper.parseFrom(data);
+        // Parse the wrapper to determine the actual type
+        W wrapper = wrapperParser.parseWrapper(data);
+        Class<? extends Message> messageClass = wrapperParser.getPayloadMessageClass(wrapper);
 
-        // Get the appropriate converter based on the oneof field
-        ProtobufConverter<?, ? extends Message> converter = switch (wrapper.getPayloadCase()) {
-            case DOG -> convertersByMessageClass.get(com.octopus.proto.AnimalProto.Dog.class);
-            case CAT -> convertersByMessageClass.get(com.octopus.proto.AnimalProto.Cat.class);
-            case BIRD -> convertersByMessageClass.get(com.octopus.proto.AnimalProto.Bird.class);
-            case FISH -> convertersByMessageClass.get(com.octopus.proto.AnimalProto.Fish.class);
-            case ANIMAL_MESSAGE -> convertersByMessageClass.get(com.octopus.proto.AnimalProto.AnimalMessage.class);
-            case PAYLOAD_NOT_SET -> throw new InvalidProtocolBufferException(
-                    "GenericWrapper has no payload set");
-        };
+        if (messageClass == null) {
+            throw new InvalidProtocolBufferException("Wrapper has no payload set");
+        }
+
+        // Get converter for the message type
+        ProtobufConverter<?, ? extends Message> converter = convertersByMessageClass.get(messageClass);
 
         if (converter == null) {
             throw new IllegalArgumentException(
-                    "No converter registered for payload type: " + wrapper.getPayloadCase());
+                    "No converter registered for message type: " + messageClass.getName());
         }
 
-        // Use the converter to deserialize to POJO
         return converter.deserialize(data);
     }
 
@@ -107,7 +120,7 @@ public class ProtoSerializer {
      * @param pojoClass the POJO class to check
      * @return true if a converter is registered
      */
-    public static boolean isConverterRegistered(Class<?> pojoClass) {
+    public boolean isConverterRegistered(Class<?> pojoClass) {
         return convertersByPojoClass.containsKey(pojoClass);
     }
 
@@ -116,18 +129,20 @@ public class ProtoSerializer {
      *
      * @param pojoClass the POJO class
      * @param <P>       the POJO type
-     * @param <M>       the protobuf Message type
      * @return the registered converter, or null if not registered
      */
-    @SuppressWarnings("unchecked")
-    public static <P, M extends Message> ProtobufConverter<P, M> getConverter(Class<P> pojoClass) {
-        return (ProtobufConverter<P, M>) convertersByPojoClass.get(pojoClass);
+    public <P> ProtobufConverter<P, ? extends Message> getConverter(Class<P> pojoClass) {
+        ProtobufConverter<?, ? extends Message> converter = convertersByPojoClass.get(pojoClass);
+        if (converter == null) {
+            return null;
+        }
+        return castConverter(converter);
     }
 
     /**
      * Clears all registered converters.
      */
-    public static void clearRegistry() {
+    public void clearRegistry() {
         convertersByPojoClass.clear();
         convertersByMessageClass.clear();
     }
@@ -137,8 +152,18 @@ public class ProtoSerializer {
      *
      * @return the number of registered converters
      */
-    public static int getRegistrySize() {
+    public int getRegistrySize() {
         return convertersByPojoClass.size();
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> ProtobufConverter<T, ? extends Message> castConverter(
+            ProtobufConverter<?, ? extends Message> converter) {
+        // This cast is safe because:
+        // 1. Converters are registered with a specific POJO class via getPojoClass()
+        // 2. We only retrieve converters using that same class as the key
+        // 3. The type system guarantees the converter handles that POJO type
+        return (ProtobufConverter<T, ? extends Message>) converter;
     }
 }
 

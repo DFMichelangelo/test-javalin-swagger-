@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package vehicles;
+
+option java_package = "com.octopus.proto";
+option java_outer_classname = "VehicleProto";
+
+// Example wrapper for vehicles - demonstrates using multiple .proto files
+message VehicleWrapper {
+  oneof payload {
+    Car car = 1;
+    Truck truck = 2;
+    Motorcycle motorcycle = 3;
+  }
+}
+
+message Car {
+  string make = 1;
+  string model = 2;
+  int32 year = 3;
+  string color = 4;
+}
+
+message Truck {
+  string make = 1;
+  string model = 2;
+  int32 payload_tons = 3;
+  bool has_trailer = 4;
+}
+
+message Motorcycle {
+  string brand = 1;
+  string model = 2;
+  int32 engine_cc = 3;
+  string type = 4;
+}
