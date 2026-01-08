@@ -103,21 +103,23 @@ public class ProtoSerializer<W extends Message> {
         // Parse the wrapper (only once!)
         W wrapper = wrapperParser.parseWrapper(data);
 
-        // Extract the message from the wrapper
-        Message message = wrapperParser.getPayloadMessage(wrapper);
+        // Get message class from wrapper (fail-fast: check before extracting)
+        Class<? extends Message> messageClass = wrapperParser.getPayloadMessageClass(wrapper);
 
-        if (message == null) {
+        if (messageClass == null) {
             throw new InvalidProtocolBufferException("Wrapper has no payload set");
         }
 
-        // Get the converter for this message type
-        Class<? extends Message> messageClass = message.getClass();
+        // Check if converter is registered (fail-fast: before extracting message)
         ProtobufConverter<?, ? extends Message> converter = convertersByMessageClass.get(messageClass);
 
         if (converter == null) {
             throw new IllegalArgumentException(
                     "No converter registered for message type: " + messageClass.getName());
         }
+
+        // Extract the message from the wrapper
+        Message message = wrapperParser.getPayloadMessage(wrapper);
 
         // Convert message to POJO
         return fromMessage(converter, message);

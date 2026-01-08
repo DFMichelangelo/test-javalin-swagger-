@@ -30,13 +30,12 @@ public class CatConverter implements ProtobufConverter<CatPojo, Cat> {
             throw new IllegalArgumentException("Cat message cannot be null");
         }
 
-        CatPojo pojo = new CatPojo();
-        pojo.setName(message.getName());
-        pojo.setColor(message.getColor());
-        pojo.setAge(message.getAge());
-        pojo.setIndoor(message.getIsIndoor());
-
-        return pojo;
+        return new CatPojo(
+                message.getName(),
+                message.getColor(),
+                message.getAge(),
+                message.getIsIndoor()
+        );
     }
 
     @Override

@@ -30,13 +30,12 @@ public class DogConverter implements ProtobufConverter<DogPojo, Dog> {
             throw new IllegalArgumentException("Dog message cannot be null");
         }
 
-        DogPojo pojo = new DogPojo();
-        pojo.setName(message.getName());
-        pojo.setBreed(message.getBreed());
-        pojo.setAge(message.getAge());
-        pojo.setTrained(message.getIsTrained());
-
-        return pojo;
+        return new DogPojo(
+                message.getName(),
+                message.getBreed(),
+                message.getAge(),
+                message.getIsTrained()
+        );
     }
 
     @Override

@@ -30,13 +30,12 @@ public class FishConverter implements ProtobufConverter<FishPojo, Fish> {
             throw new IllegalArgumentException("Fish message cannot be null");
         }
 
-        FishPojo pojo = new FishPojo();
-        pojo.setName(message.getName());
-        pojo.setType(message.getType());
-        pojo.setLengthCm(message.getLengthCm());
-        pojo.setWaterType(message.getWaterType());
-
-        return pojo;
+        return new FishPojo(
+                message.getName(),
+                message.getType(),
+                message.getLengthCm(),
+                message.getWaterType()
+        );
     }
 
     @Override

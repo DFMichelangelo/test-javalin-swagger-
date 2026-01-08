@@ -30,13 +30,12 @@ public class BirdConverter implements ProtobufConverter<BirdPojo, Bird> {
             throw new IllegalArgumentException("Bird message cannot be null");
         }
 
-        BirdPojo pojo = new BirdPojo();
-        pojo.setName(message.getName());
-        pojo.setSpecies(message.getSpecies());
-        pojo.setCanFly(message.getCanFly());
-        pojo.setWingspanCm(message.getWingspanCm());
-
-        return pojo;
+        return new BirdPojo(
+                message.getName(),
+                message.getSpecies(),
+                message.getCanFly(),
+                message.getWingspanCm()
+        );
     }
 
     @Override
