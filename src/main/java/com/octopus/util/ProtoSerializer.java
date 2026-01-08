@@ -57,8 +57,7 @@ public class ProtoSerializer<W extends Message> {
 
     /**
      * Serializes a POJO to byte array.
-     * Uses the registered converter to convert POJO to protobuf message,
-     * wrap in the wrapper type, and serialize.
+     * Converts POJO to protobuf message, wraps in the wrapper type, and serializes.
      *
      * @param pojo the POJO (business object) to serialize
      * @param <T>  the POJO type
@@ -77,14 +76,20 @@ public class ProtoSerializer<W extends Message> {
                     ". Use registerConverter() to register this type.");
         }
 
+        // Convert POJO to Message
         ProtobufConverter<T, ? extends Message> typedConverter = castConverter(converter);
-        return typedConverter.serialize(pojo);
+        Message message = typedConverter.toMessage(pojo);
+
+        // Wrap the message
+        W wrapper = wrapperParser.wrapMessage(message);
+
+        // Serialize to bytes
+        return wrapper.toByteArray();
     }
 
     /**
      * Deserializes a byte array by automatically detecting the type from the wrapper.
-     * Reads the wrapper's oneof field to determine which type it contains,
-     * then uses the appropriate converter to return the POJO.
+     * Parses the wrapper once, extracts the message, then converts to POJO.
      *
      * @param data the byte array to deserialize (wrapper bytes)
      * @return the deserialized POJO (business object)
@@ -95,15 +100,18 @@ public class ProtoSerializer<W extends Message> {
             throw new IllegalArgumentException("Data cannot be null or empty");
         }
 
-        // Parse the wrapper to determine the actual type
+        // Parse the wrapper (only once!)
         W wrapper = wrapperParser.parseWrapper(data);
-        Class<? extends Message> messageClass = wrapperParser.getPayloadMessageClass(wrapper);
 
-        if (messageClass == null) {
+        // Extract the message from the wrapper
+        Message message = wrapperParser.getPayloadMessage(wrapper);
+
+        if (message == null) {
             throw new InvalidProtocolBufferException("Wrapper has no payload set");
         }
 
-        // Get converter for the message type
+        // Get the converter for this message type
+        Class<? extends Message> messageClass = message.getClass();
         ProtobufConverter<?, ? extends Message> converter = convertersByMessageClass.get(messageClass);
 
         if (converter == null) {
@@ -111,7 +119,16 @@ public class ProtoSerializer<W extends Message> {
                     "No converter registered for message type: " + messageClass.getName());
         }
 
-        return converter.deserialize(data);
+        // Convert message to POJO
+        return fromMessage(converter, message);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <M extends Message> Object fromMessage(
+            ProtobufConverter<?, ? extends Message> converter,
+            Message message) {
+        ProtobufConverter<?, M> typedConverter = (ProtobufConverter<?, M>) converter;
+        return typedConverter.fromMessage((M) message);
     }
 
     /**
